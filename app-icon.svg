@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <!-- Gradientes sutiles y profesionales -->
+    <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#00A9C5"/>
+      <stop offset="100%" stop-color="#00839A"/>
+    </linearGradient>
+    <linearGradient id="shackleGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#00BEDB"/>
+      <stop offset="100%" stop-color="#009FBA"/>
+    </linearGradient>
+    <filter id="dropShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#004D5A" flood-opacity="0.25"/>
+    </filter>
+    <filter id="textShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#004D5A" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+
+  <!-- Grupo del Candado con sombra suave -->
+  <g filter="url(#dropShadow)">
+    <!-- Arco del candado (Shackle) -->
+    <path 
+      d="M 336 410 
+         V 270 
+         A 176 176 0 0 1 688 270 
+         V 410" 
+      fill="none" 
+      stroke="url(#shackleGrad)" 
+      stroke-width="76" 
+      stroke-linecap="round" 
+      stroke-linejoin="round"
+    />
+
+    <!-- Cuerpo principal del candado -->
+    <rect 
+      x="224" 
+      y="380" 
+      width="576" 
+      height="380" 
+      rx="64" 
+      ry="64" 
+      fill="url(#bodyGrad)"
+    />
+
+    <!-- Cerradura / Keyhole interior en blanco nítido -->
+    <circle cx="512" cy="530" r="42" fill="#FFFFFF" />
+    <path 
+      d="M 492 546 
+         L 484 636 
+         A 12 12 0 0 0 496 648 
+         H 528 
+         A 12 12 0 0 0 540 636 
+         L 532 546 
+         Z" 
+      fill="#FFFFFF" 
+    />
+  </g>
+
+  <!-- Rótulo 3SM en la parte inferior, perfectamente alineado y tipografiado -->
+  <g filter="url(#textShadow)">
+    <text 
+      x="512" 
+      y="900" 
+      font-family="system-ui, -apple-system, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif" 
+      font-size="144" 
+      font-weight="900" 
+      letter-spacing="6" 
+      fill="#00839A" 
+      text-anchor="middle"
+    >3SM</text>
+  </g>
+</svg>

@@ -1,0 +1,63 @@
+name: Compilar 3SM Secret para Windows
+
+on:
+  workflow_dispatch: # Permite ejecutar la compilación manualmente desde la pestaña Actions en GitHub
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*'
+
+jobs:
+  build-windows:
+    name: Generar Instalador Windows (.exe)
+    runs-on: windows-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Descargar código fuente
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js (v20)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Instalar Rust estable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Optimizar caché de compilación Rust
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Instalar dependencias npm
+        run: npm install
+
+      - name: Compilar Frontend y Binario de Tauri para Windows
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: '3SM Secret v__VERSION__'
+          releaseBody: 'Instalador oficial de 3SM Secret para Windows x64.'
+          releaseDraft: true
+          prerelease: false
+
+      - name: Publicar instalador (.exe / NSIS) como archivo de descarga
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: 3SM-Secret-Windows-x64-Installer
+          path: |
+            src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/msi/*.msi
+            src-tauri/target/release/3SM Secret.exe
+          if-no-files-found: warn

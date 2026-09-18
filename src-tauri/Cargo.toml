@@ -1,0 +1,36 @@
+[package]
+name = "tresm_secret"
+version = "0.1.0"
+description = "3SM Secret - Gestor de Contraseñas inspirado en Bitwarden"
+authors = ["3SM"]
+edition = "2021"
+
+[lib]
+name = "tresm_secret_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+argon2 = { version = "0.5", features = ["std"] }
+aes-gcm = "0.10"
+zeroize = { version = "1.8", features = ["derive"] }
+rand = "0.8"
+directories = "5.0"
+arboard = "3.4"
+tokio = { version = "1", features = ["sync", "time", "macros", "rt"] }
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+hex = "0.4"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true
