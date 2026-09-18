@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 use crate::crypto;
 use crate::models::{
-    EncryptedEnvelope, Folder, ItemTypeSerdeWrapper, PasswordGenOptions, PasswordGenResult,
+    EncryptedEnvelope, PasswordGenOptions, PasswordGenResult,
     VaultItem, VaultPayload, VaultSettings,
 };
 use crate::state::{AppSessionState, UnlockedVaultSession};
@@ -32,105 +32,9 @@ pub async fn setup_vault(
     let salt = crypto::generate_salt();
     let key = crypto::derive_key(&master_password, &salt)?;
 
-    // Crear elementos iniciales de demostración inspirados en el diseño de Stitch
-    let now = Utc::now().to_rfc3339();
-    let demo_items = vec![
-        VaultItem {
-            id: Uuid::new_v4().to_string(),
-            name: "Google Workspace".to_string(),
-            item_type: ItemTypeSerdeWrapper::Login,
-            username: "admin@corporativo.com".to_string(),
-            password: "p@ssW0rd_Stitch#2026".to_string(),
-            url: "https://accounts.google.com".to_string(),
-            notes: "Cuenta de administrador corporativo con llaves de seguridad FIDO2 habilitadas.".to_string(),
-            folder_id: None,
-            favorite: true,
-            totp_secret: Some("JBSWY3DPEHPK3PXP".to_string()),
-            cardholder_name: None,
-            card_number: None,
-            card_brand: None,
-            card_exp_month: None,
-            card_exp_year: None,
-            card_cvv: None,
-            created_at: now.clone(),
-            updated_at: now.clone(),
-        },
-        VaultItem {
-            id: Uuid::new_v4().to_string(),
-            name: "Microsoft 365 Azure".to_string(),
-            item_type: ItemTypeSerdeWrapper::Login,
-            username: "sec-admin@azurecorp.net".to_string(),
-            password: "Azure#Sec_K3y!99".to_string(),
-            url: "https://portal.azure.com".to_string(),
-            notes: "Suscripción Enterprise de producción y despliegues.".to_string(),
-            folder_id: None,
-            favorite: true,
-            totp_secret: None,
-            cardholder_name: None,
-            card_number: None,
-            card_brand: None,
-            card_exp_month: None,
-            card_exp_year: None,
-            card_cvv: None,
-            created_at: now.clone(),
-            updated_at: now.clone(),
-        },
-        VaultItem {
-            id: Uuid::new_v4().to_string(),
-            name: "GitHub Enterprise".to_string(),
-            item_type: ItemTypeSerdeWrapper::Login,
-            username: "dev-lead".to_string(),
-            password: "ghp_secureTokenMockDev2026!".to_string(),
-            url: "https://github.com".to_string(),
-            notes: "Token con permisos de administración de repositorios.".to_string(),
-            folder_id: None,
-            favorite: false,
-            totp_secret: None,
-            cardholder_name: None,
-            card_number: None,
-            card_brand: None,
-            card_exp_month: None,
-            card_exp_year: None,
-            card_cvv: None,
-            created_at: now.clone(),
-            updated_at: now.clone(),
-        },
-        VaultItem {
-            id: Uuid::new_v4().to_string(),
-            name: "Tarjeta Visa Corporativa".to_string(),
-            item_type: ItemTypeSerdeWrapper::Card,
-            username: String::new(),
-            password: String::new(),
-            url: String::new(),
-            notes: "Tarjeta para compras de infraestructura en la nube y licencias de software.".to_string(),
-            folder_id: None,
-            favorite: true,
-            totp_secret: None,
-            cardholder_name: Some("ISMAEL LUJAN CASADO".to_string()),
-            card_number: Some("4532 8791 2345 9812".to_string()),
-            card_brand: Some("Visa".to_string()),
-            card_exp_month: Some("09".to_string()),
-            card_exp_year: Some("2029".to_string()),
-            card_cvv: Some("842".to_string()),
-            created_at: now.clone(),
-            updated_at: now.clone(),
-        },
-    ];
-
-    let folders = vec![
-        Folder {
-            id: Uuid::new_v4().to_string(),
-            name: "Trabajo".to_string(),
-        },
-        Folder {
-            id: Uuid::new_v4().to_string(),
-            name: "Finanzas".to_string(),
-        },
-    ];
-
     let payload = VaultPayload {
-        items: demo_items,
-        folders,
+        items: vec![],
+        folders: vec![],
         settings: VaultSettings {
             auto_lock_minutes: 15,
             language: language.unwrap_or_else(|| "es".to_string()),

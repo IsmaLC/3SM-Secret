@@ -17,75 +17,8 @@ function isTauri(): boolean {
 const WEB_VAULT_KEY = "3sm_secret_vault_payload";
 const WEB_HASH_KEY = "3sm_secret_master_hash";
 
-const initialDemoItems: VaultItem[] = [
-  {
-    id: "demo-item-1",
-    name: "Google Workspace",
-    item_type: "login",
-    username: "admin@corporativo.com",
-    password: "p@ssW0rd_Stitch#2026",
-    url: "https://accounts.google.com",
-    notes: "Cuenta de administrador corporativo con llaves de seguridad FIDO2 habilitadas.",
-    folder_id: "folder-1",
-    favorite: true,
-    totp_secret: "JBSWY3DPEHPK3PXP",
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: "demo-item-2",
-    name: "Microsoft 365 Azure",
-    item_type: "login",
-    username: "sec-admin@azurecorp.net",
-    password: "Azure#Sec_K3y!99",
-    url: "https://portal.azure.com",
-    notes: "Suscripción Enterprise de producción y despliegues.",
-    folder_id: "folder-1",
-    favorite: true,
-    totp_secret: null,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: "demo-item-3",
-    name: "GitHub Enterprise",
-    item_type: "login",
-    username: "dev-lead",
-    password: "ghp_secureTokenMockDev2026!",
-    url: "https://github.com",
-    notes: "Token con permisos de administración de repositorios corporativos.",
-    folder_id: null,
-    favorite: false,
-    totp_secret: null,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: "demo-item-4",
-    name: "Tarjeta Visa Corporativa",
-    item_type: "card",
-    username: "",
-    password: "",
-    url: "",
-    notes: "Tarjeta para compras de infraestructura en la nube y licencias de software.",
-    folder_id: "folder-2",
-    favorite: true,
-    totp_secret: null,
-    cardholder_name: "ISMAEL LUJAN CASADO",
-    card_number: "4532 8791 2345 9812",
-    card_brand: "Visa",
-    card_exp_month: "09",
-    card_exp_year: "2029",
-    card_cvv: "842",
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-];
-
-const initialDemoFolders = [
-  { id: "folder-1", name: "Trabajo" },
-  { id: "folder-2", name: "Finanzas" },
-];
+const initialDemoItems: VaultItem[] = [];
+const initialDemoFolders: Folder[] = [];
 
 export const api = {
   async vaultExists(): Promise<boolean> {
