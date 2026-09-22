@@ -146,6 +146,10 @@ export interface Translations {
   last_check: string;
   never_checked: string;
   update_check_error: string;
+  download_and_install: string;
+  downloading_update: string;
+  relaunch_to_apply: string;
+  update_installed: string;
 }
 
 export const translations: Record<Language, Translations> = {
@@ -295,6 +299,10 @@ export const translations: Record<Language, Translations> = {
     last_check: "Última comprobación",
     never_checked: "Nunca",
     update_check_error: "No se pudo comprobar en este momento",
+    download_and_install: "Descargar e instalar",
+    downloading_update: "Descargando actualización...",
+    relaunch_to_apply: "Reiniciar para aplicar",
+    update_installed: "¡Actualización instalada con éxito!",
   },
   ca: {
     app_name: "3SM Secret",
@@ -442,5 +450,9 @@ export const translations: Record<Language, Translations> = {
     last_check: "Darrera comprovació",
     never_checked: "Mai",
     update_check_error: "No s'ha pogut comprovar en aquest moment",
+    download_and_install: "Descarregar i instal·lar",
+    downloading_update: "Descarregant actualització...",
+    relaunch_to_apply: "Reiniciar per aplicar",
+    update_installed: "Actualització instal·lada amb èxit!",
   },
 };

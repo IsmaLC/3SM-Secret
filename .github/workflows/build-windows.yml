@@ -44,11 +44,13 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
         with:
           tagName: ${{ github.ref_name }}
           releaseName: '3SM Secret v__VERSION__'
           releaseBody: 'Instalador oficial de 3SM Secret para Windows x64.'
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
 
       - name: Publicar instalador (.exe / NSIS) como archivo de descarga
@@ -58,6 +60,8 @@ jobs:
           name: 3SM-Secret-Windows-x64-Installer
           path: |
             src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/nsis/*.sig
             src-tauri/target/release/bundle/msi/*.msi
+            src-tauri/target/release/latest.json
             src-tauri/target/release/3SM Secret.exe
           if-no-files-found: warn

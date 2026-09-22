@@ -11,11 +11,17 @@ import {
   Plus,
   Trash2,
   RefreshCw,
-  ExternalLink,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Download,
+  RotateCw
 } from "lucide-react";
-import { checkForAppUpdates, CURRENT_APP_VERSION } from "../services/updater";
+import {
+  checkForAppUpdates,
+  downloadAndInstallAppUpdate,
+  relaunchApp,
+  CURRENT_APP_VERSION,
+} from "../services/updater";
 
 interface SettingsModalProps {
   language: Language;
@@ -51,6 +57,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [updateResult, setUpdateResult] = useState<UpdateInfo | null>(null);
   const [updateError, setUpdateError] = useState<string | null>(null);
 
+  // Estados de descarga e instalación in-app (1 clic)
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [isDownloaded, setIsDownloaded] = useState(false);
+
   useEffect(() => {
     if (isOpen) {
       setCurrentSettings(settings);
@@ -60,6 +71,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setCheckingUpdate(false);
       setUpdateResult(null);
       setUpdateError(null);
+      setIsDownloading(false);
+      setDownloadProgress(0);
+      setIsDownloaded(false);
     }
   }, [isOpen, settings, folders]);
 
@@ -67,6 +81,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     setCheckingUpdate(true);
     setUpdateError(null);
     setUpdateResult(null);
+    setIsDownloaded(false);
     try {
       const res = await checkForAppUpdates();
       setUpdateResult(res);
@@ -80,6 +95,27 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     } finally {
       setCheckingUpdate(false);
     }
+  };
+
+  const handleDownloadAndInstall = async () => {
+    if (!updateResult?.hasUpdate) return;
+    setIsDownloading(true);
+    setDownloadProgress(0);
+    setUpdateError(null);
+    try {
+      await downloadAndInstallAppUpdate((percent) => {
+        setDownloadProgress(percent);
+      });
+      setIsDownloaded(true);
+    } catch (err: any) {
+      setUpdateError(err.message || "Error al descargar la actualización");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleRelaunch = async () => {
+    await relaunchApp();
   };
 
   if (!isOpen) return null;
@@ -345,29 +381,60 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
             {/* Resultado de la comprobación en la paleta corporativa (sin verde) */}
             {updateResult && (
-              <div className="p-2.5 rounded-lg border text-xs flex items-center justify-between gap-2 bg-brand-primary-subtle border-primary-container/25 text-primary">
-                <div className="flex items-center gap-2">
-                  {updateResult.hasUpdate ? (
-                    <AlertCircle className="w-4 h-4 shrink-0 text-primary" />
-                  ) : (
-                    <CheckCircle2 className="w-4 h-4 shrink-0 text-primary" />
+              <div className="p-3 rounded-xl border text-xs space-y-2.5 bg-brand-primary-subtle border-primary-container/25 text-primary">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    {updateResult.hasUpdate ? (
+                      <AlertCircle className="w-4 h-4 shrink-0 text-primary" />
+                    ) : (
+                      <CheckCircle2 className="w-4 h-4 shrink-0 text-primary" />
+                    )}
+                    <span className="font-semibold">
+                      {isDownloaded
+                        ? t.update_installed
+                        : updateResult.hasUpdate
+                        ? `${t.update_available}: v${updateResult.latestVersion}`
+                        : `${t.app_up_to_date} (v${updateResult.currentVersion})`}
+                    </span>
+                  </div>
+
+                  {updateResult.hasUpdate && !isDownloaded && !isDownloading && (
+                    <button
+                      type="button"
+                      onClick={handleDownloadAndInstall}
+                      className="px-3 py-1 bg-primary-container hover:bg-brand-primary-hover text-on-primary rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs shrink-0"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>{t.download_and_install}</span>
+                    </button>
                   )}
-                  <span className="font-medium">
-                    {updateResult.hasUpdate
-                      ? `${t.update_available}: v${updateResult.latestVersion}`
-                      : `${t.app_up_to_date} (v${updateResult.currentVersion})`}
-                  </span>
+
+                  {isDownloaded && (
+                    <button
+                      type="button"
+                      onClick={handleRelaunch}
+                      className="px-3 py-1 bg-primary-container hover:bg-brand-primary-hover text-on-primary rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-xs shrink-0 animate-pulse"
+                    >
+                      <RotateCw className="w-3.5 h-3.5" />
+                      <span>{t.relaunch_to_apply}</span>
+                    </button>
+                  )}
                 </div>
-                {updateResult.hasUpdate && updateResult.releaseUrl && (
-                  <a
-                    href={updateResult.releaseUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline shrink-0"
-                  >
-                    <span>{t.view_update}</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
+
+                {/* Barra de progreso de descarga */}
+                {isDownloading && (
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex items-center justify-between text-[11px] font-medium text-text-secondary">
+                      <span>{t.downloading_update}</span>
+                      <span>{downloadProgress}%</span>
+                    </div>
+                    <div className="w-full bg-surface-canvas rounded-full h-2 overflow-hidden border border-border-subtle">
+                      <div
+                        className="bg-primary-container h-full transition-all duration-200 ease-out"
+                        style={{ width: `${downloadProgress}%` }}
+                      />
+                    </div>
+                  </div>
                 )}
               </div>
             )}

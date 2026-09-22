@@ -25,3 +25,7 @@ dist-ssr
 
 # Rust / Tauri build artifacts
 src-tauri/target/
+
+# Tauri updater keys
+*.key
+*.key.pub

@@ -44,5 +44,13 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "RWRaluy4HTh7kFkuFh1s09cFxV2PvMQNG9VIJZfgRK37h8VNWxsJiPD8",
+      "endpoints": [
+        "https://github.com/IsmaLC/3SM-Secret/releases/latest/download/latest.json"
+      ]
+    }
   }
 }
