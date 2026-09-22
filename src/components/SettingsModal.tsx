@@ -1,7 +1,21 @@
 import React, { useState, useEffect } from "react";
 import { translations, Language } from "../i18n";
-import { VaultSettings, Folder } from "../types";
-import { X, Settings, Globe, Clock, Palette, Folder as FolderIcon, Plus, Trash2 } from "lucide-react";
+import { VaultSettings, Folder, UpdateInfo } from "../types";
+import {
+  X,
+  Settings,
+  Globe,
+  Clock,
+  Palette,
+  Folder as FolderIcon,
+  Plus,
+  Trash2,
+  RefreshCw,
+  ExternalLink,
+  CheckCircle2,
+  AlertCircle
+} from "lucide-react";
+import { checkForAppUpdates, CURRENT_APP_VERSION } from "../services/updater";
 
 interface SettingsModalProps {
   language: Language;
@@ -32,14 +46,41 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [folderToDelete, setFolderToDelete] = useState<Folder | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // Estados de comprobación de actualizaciones
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [updateResult, setUpdateResult] = useState<UpdateInfo | null>(null);
+  const [updateError, setUpdateError] = useState<string | null>(null);
+
   useEffect(() => {
     if (isOpen) {
       setCurrentSettings(settings);
       setCurrentFolders(folders);
       setFolderToDelete(null);
       setNewFolderName("");
+      setCheckingUpdate(false);
+      setUpdateResult(null);
+      setUpdateError(null);
     }
   }, [isOpen, settings, folders]);
+
+  const handleManualCheckUpdate = async () => {
+    setCheckingUpdate(true);
+    setUpdateError(null);
+    setUpdateResult(null);
+    try {
+      const res = await checkForAppUpdates();
+      setUpdateResult(res);
+      const nowIso = new Date().toISOString();
+      setCurrentSettings((prev) => ({
+        ...prev,
+        last_update_check: nowIso,
+      }));
+    } catch (err: any) {
+      setUpdateError(err.message || t.update_check_error);
+    } finally {
+      setCheckingUpdate(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -274,6 +315,70 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <option value="light">{t.theme_light}</option>
             <option value="dark">{t.theme_dark}</option>
           </select>
+        </div>
+
+        {/* Sección: Versión y Actualizaciones */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-text-secondary">
+            <RefreshCw className="w-3.5 h-3.5 text-text-muted" />
+            <span>{t.version_and_updates}</span>
+          </div>
+
+          <div className="p-3.5 bg-surface-panel rounded-xl border border-border-strong space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono text-text-muted bg-surface-canvas px-2.5 py-1 rounded-md border border-border-subtle font-medium">
+                v{CURRENT_APP_VERSION}
+              </span>
+
+              <button
+                type="button"
+                disabled={checkingUpdate}
+                onClick={handleManualCheckUpdate}
+                className="h-8 px-3 border border-border-strong hover:bg-surface-canvas bg-surface-canvas text-text-primary rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 shadow-xs"
+              >
+                <RefreshCw
+                  className={`w-3.5 h-3.5 ${checkingUpdate ? "animate-spin text-primary" : "text-text-muted"}`}
+                />
+                <span>{checkingUpdate ? t.checking_updates : t.check_updates_now}</span>
+              </button>
+            </div>
+
+            {/* Resultado de la comprobación en la paleta corporativa (sin verde) */}
+            {updateResult && (
+              <div className="p-2.5 rounded-lg border text-xs flex items-center justify-between gap-2 bg-brand-primary-subtle border-primary-container/25 text-primary">
+                <div className="flex items-center gap-2">
+                  {updateResult.hasUpdate ? (
+                    <AlertCircle className="w-4 h-4 shrink-0 text-primary" />
+                  ) : (
+                    <CheckCircle2 className="w-4 h-4 shrink-0 text-primary" />
+                  )}
+                  <span className="font-medium">
+                    {updateResult.hasUpdate
+                      ? `${t.update_available}: v${updateResult.latestVersion}`
+                      : `${t.app_up_to_date} (v${updateResult.currentVersion})`}
+                  </span>
+                </div>
+                {updateResult.hasUpdate && updateResult.releaseUrl && (
+                  <a
+                    href={updateResult.releaseUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline shrink-0"
+                  >
+                    <span>{t.view_update}</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
+              </div>
+            )}
+
+            {updateError && (
+              <div className="p-2.5 rounded-lg border border-red-200 dark:border-red-900 bg-red-50/70 dark:bg-red-950/30 text-status-danger text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{updateError}</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Acciones al pie */}

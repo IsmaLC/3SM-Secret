@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { api } from "./api";
-import { Folder, ItemType, VaultItem, VaultPayload, VaultSettings } from "./types";
+import { Folder, ItemType, VaultItem, VaultPayload, VaultSettings, UpdateInfo } from "./types";
 import { translations, Language } from "./i18n";
 import { LockScreen } from "./components/LockScreen";
 import { Sidebar } from "./components/Sidebar";
@@ -10,12 +10,14 @@ import { PasswordGeneratorModal } from "./components/PasswordGeneratorModal";
 import { SettingsModal } from "./components/SettingsModal";
 import { NewItemModal } from "./components/NewItemModal";
 import { ShareView } from "./components/ShareView";
+import { isDailyCheckDue, checkForAppUpdates } from "./services/updater";
 
 export function App() {
   const [loading, setLoading] = useState(true);
   const [vaultExists, setVaultExists] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [payload, setPayload] = useState<VaultPayload | null>(null);
+  const [availableUpdate, setAvailableUpdate] = useState<UpdateInfo | null>(null);
 
   // Filtros de navegación
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -144,6 +146,29 @@ export function App() {
     }
     if (data.items.length > 0) {
       setSelectedItem(data.items[0]);
+    }
+
+    // Comprobación diaria automática en segundo plano (cada 24 horas)
+    if (isDailyCheckDue(data.settings?.last_update_check)) {
+      checkForAppUpdates()
+        .then(async (info) => {
+          const nowIso = new Date().toISOString();
+          const updatedSettings: VaultSettings = {
+            ...data.settings,
+            last_update_check: nowIso,
+          };
+          setPayload((prev) => (prev ? { ...prev, settings: updatedSettings } : null));
+          try {
+            await api.saveSettings(updatedSettings);
+          } catch {}
+
+          if (info.hasUpdate) {
+            setAvailableUpdate(info);
+          }
+        })
+        .catch((err) => {
+          console.warn("Comprobación diaria automática de actualizaciones en segundo plano no pudo completarse:", err);
+        });
     }
   };
 
@@ -327,6 +352,7 @@ export function App() {
         onOpenGenerator={() => setIsGeneratorOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onLockVault={handleLockVault}
+        hasUpdate={Boolean(availableUpdate?.hasUpdate)}
       />
 
       {/* 2. Columna Central: Master List Panel de 380px de Stitch */}

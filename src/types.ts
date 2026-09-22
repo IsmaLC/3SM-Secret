@@ -30,6 +30,17 @@ export interface VaultSettings {
   auto_lock_minutes: number;
   language: string; // 'es' | 'ca'
   theme: string; // 'light' | 'dark' | 'system'
+  check_updates_daily?: boolean;
+  last_update_check?: string | null;
+}
+
+export interface UpdateInfo {
+  hasUpdate: boolean;
+  currentVersion: string;
+  latestVersion: string;
+  releaseUrl?: string;
+  releaseNotes?: string;
+  publishedAt?: string;
 }
 
 export interface VaultPayload {

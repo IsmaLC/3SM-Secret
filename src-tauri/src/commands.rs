@@ -39,6 +39,8 @@ pub async fn setup_vault(
             auto_lock_minutes: 15,
             language: language.unwrap_or_else(|| "es".to_string()),
             theme: "light".to_string(),
+            check_updates_daily: true,
+            last_update_check: None,
         },
         password_hint: hint.clone(),
     };

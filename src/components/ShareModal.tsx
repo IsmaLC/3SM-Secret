@@ -2,12 +2,12 @@ import { useState, useEffect } from "react";
 import { VaultItem } from "../types";
 import { Language, translations } from "../i18n";
 import { api } from "../api";
+import { FuseButton } from "./FuseButton";
 import {
   X,
   Share2,
   Copy,
   Check,
-  Flame,
   ShieldCheck,
   Clock,
   KeyRound,
@@ -37,12 +37,14 @@ export function ShareModal({ isOpen, onClose, item, language }: ShareModalProps)
   const [loading, setLoading] = useState(false);
   const [generatedUrl, setGeneratedUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [clipboardSeconds, setClipboardSeconds] = useState<number | null>(null);
 
   // Reiniciar estado cada vez que se abre el modal o se selecciona un elemento diferente
   useEffect(() => {
     if (isOpen) {
       setGeneratedUrl(null);
       setCopied(false);
+      setClipboardSeconds(null);
       setLoading(false);
       setIncludeUsername(!!item.username);
       setIncludePassword(!!item.password);
@@ -53,9 +55,19 @@ export function ShareModal({ isOpen, onClose, item, language }: ShareModalProps)
     }
   }, [isOpen, item.id]);
 
+  // Contador regresivo para la purga del portapapeles (20 segundos)
+  useEffect(() => {
+    if (clipboardSeconds !== null && clipboardSeconds > 0) {
+      const timer = setTimeout(() => {
+        setClipboardSeconds((prev) => (prev !== null && prev > 1 ? prev - 1 : null));
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [clipboardSeconds]);
+
   if (!isOpen) return null;
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (): Promise<string | void> => {
     setLoading(true);
     try {
       const payload: any = {
@@ -76,10 +88,12 @@ export function ShareModal({ isOpen, onClose, item, language }: ShareModalProps)
 
       const { shareId, shareKeyHex } = await api.createSecureShare(payload, ttlMinutes);
 
-      // Enlace Zero-Knowledge: la clave AES-256 viaja solo en el fragmento #key del hash
-      const baseUrl = `${window.location.origin}${window.location.pathname}`;
-      const fullUrl = `${baseUrl}#/share/${shareId}#key=${shareKeyHex}`;
-      setGeneratedUrl(fullUrl);
+      // Obtener URL base de Cloudflare Tunnel (trycloudflare.com) para acceso universal
+      const publicBase = await api.getPublicShareBaseUrl();
+      const baseClean = publicBase.endsWith("/") ? publicBase : `${publicBase}/`;
+      // Enlace Zero-Knowledge: la clave AES-256 viaja únicamente en el fragmento #key del hash
+      const fullUrl = `${baseClean}#/share/${shareId}#key=${shareKeyHex}`;
+      return fullUrl;
     } catch (err) {
       console.error("Error generando enlace de un solo uso:", err);
     } finally {
@@ -90,8 +104,23 @@ export function ShareModal({ isOpen, onClose, item, language }: ShareModalProps)
   const handleCopy = async () => {
     if (!generatedUrl) return;
     try {
-      await navigator.clipboard.writeText(generatedUrl);
+      // Copiar al portapapeles y programar la purga automática estricta a los 20 segundos
+      await api.copyToClipboardTimed(generatedUrl, 20);
+
+      // Respaldo navegador directo por seguridad adicional
+      if (navigator.clipboard) {
+        setTimeout(async () => {
+          try {
+            const current = await navigator.clipboard.readText();
+            if (current === generatedUrl) {
+              await navigator.clipboard.writeText("");
+            }
+          } catch {}
+        }, 20000);
+      }
+
       setCopied(true);
+      setClipboardSeconds(20);
       setTimeout(() => setCopied(false), 2500);
     } catch (err) {
       console.error("Error al copiar enlace:", err);
@@ -101,6 +130,7 @@ export function ShareModal({ isOpen, onClose, item, language }: ShareModalProps)
   const handleReset = () => {
     setGeneratedUrl(null);
     setCopied(false);
+    setClipboardSeconds(null);
   };
 
   return (
@@ -109,17 +139,12 @@ export function ShareModal({ isOpen, onClose, item, language }: ShareModalProps)
         {/* Cabecera */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-orange-100 text-orange-600 dark:bg-orange-950/40 dark:text-orange-400">
+            <div className="p-2.5 rounded-xl bg-primary/10 text-primary dark:bg-primary/20">
               <Share2 className="w-5 h-5" />
             </div>
-            <div>
-              <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                {t.share_title}
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[280px]">
-                {item.name}
-              </p>
-            </div>
+            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+              {t.share_title}
+            </h2>
           </div>
           <button
             onClick={onClose}
@@ -133,13 +158,14 @@ export function ShareModal({ isOpen, onClose, item, language }: ShareModalProps)
         <div className="p-6 overflow-y-auto space-y-5">
           {!generatedUrl ? (
             <>
-              {/* Explicación de seguridad */}
-              <div className="p-3.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 rounded-xl flex items-start gap-3">
-                <Flame className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                <div className="text-xs text-amber-900 dark:text-amber-200 leading-relaxed">
-                  <p className="font-medium mb-0.5">Autodestrucción garantizada (Burn-After-Reading)</p>
-                  <p>{t.share_desc}</p>
+              {/* Aviso claro y sobrio de un solo uso */}
+              <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800 rounded-xl flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10 text-primary dark:bg-primary/20 shrink-0">
+                  <ShieldCheck className="w-4 h-4" />
                 </div>
+                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                  {t.share_desc}
+                </p>
               </div>
 
               {/* Elementos a incluir */}
@@ -288,15 +314,15 @@ export function ShareModal({ isOpen, onClose, item, language }: ShareModalProps)
           ) : (
             /* Vista tras generar el enlace */
             <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
-              <div className="p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-900/50 rounded-2xl flex items-start gap-3">
-                <div className="p-2 rounded-xl bg-emerald-500 text-white shrink-0 mt-0.5">
+              <div className="p-4 bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800 rounded-xl flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-primary/10 text-primary dark:bg-primary/20 shrink-0 mt-0.5">
                   <ShieldCheck className="w-5 h-5" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-semibold text-emerald-900 dark:text-emerald-200">
+                  <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                     {t.share_link_ready}
                   </h4>
-                  <p className="text-xs text-emerald-800/90 dark:text-emerald-300/80 mt-1 leading-relaxed">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
                     {t.share_link_warning}
                   </p>
                 </div>
@@ -308,16 +334,20 @@ export function ShareModal({ isOpen, onClose, item, language }: ShareModalProps)
                   type="text"
                   readOnly
                   value={generatedUrl}
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs rounded-xl px-3.5 py-3 pr-24 font-mono select-all focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full bg-slate-50/60 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 text-xs rounded-xl px-3.5 py-3 pr-24 font-mono select-all focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 <button
                   onClick={handleCopy}
-                  className="absolute right-1.5 top-1.5 bottom-1.5 px-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-1.5 transition-colors shadow-sm"
+                  className={`absolute right-1.5 top-1.5 bottom-1.5 px-3 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all shadow-xs ${
+                    copied
+                      ? "bg-emerald-600 text-white"
+                      : "bg-primary-container hover:bg-brand-primary-hover text-on-primary"
+                  }`}
                 >
                   {copied ? (
                     <>
-                      <Check className="w-3.5 h-3.5 text-emerald-500" />
-                      <span className="text-emerald-600 font-semibold">{t.copied}</span>
+                      <Check className="w-3.5 h-3.5" />
+                      <span>{t.copied}</span>
                     </>
                   ) : (
                     <>
@@ -327,6 +357,14 @@ export function ShareModal({ isOpen, onClose, item, language }: ShareModalProps)
                   )}
                 </button>
               </div>
+
+              {/* Indicador discreto de autodestrucción del portapapeles (20 segundos) */}
+              {clipboardSeconds !== null && (
+                <div className="flex items-center gap-2 text-xs text-primary dark:text-primary-fixed-dim bg-brand-primary-subtle px-3 py-2 rounded-xl border border-primary-container/20 animate-in fade-in duration-150">
+                  <Clock className="w-3.5 h-3.5 shrink-0" />
+                  <span>El enlace permanecerá en el portapapeles durante {clipboardSeconds} s</span>
+                </div>
+              )}
 
               {/* Acciones tras generar el enlace */}
               <div className="pt-2 flex items-center justify-between">
@@ -340,7 +378,7 @@ export function ShareModal({ isOpen, onClose, item, language }: ShareModalProps)
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors border border-slate-200 dark:border-slate-700"
+                  className="px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 rounded-xl transition-all border border-slate-300 dark:border-slate-700 shadow-2xs"
                 >
                   {t.cancel}
                 </button>
@@ -355,28 +393,24 @@ export function ShareModal({ isOpen, onClose, item, language }: ShareModalProps)
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded-xl transition-colors"
+              className="px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/60 rounded-xl transition-all shadow-2xs"
             >
               {t.cancel}
             </button>
-            <button
-              type="button"
+            <FuseButton
+              label={t.share_generate_link}
+              activeLabel={t.share_generating}
+              icon={<Share2 className="w-3.5 h-3.5" />}
+              duration={3200}
               disabled={loading || (!includeUsername && !includePassword && !includeNotes && !includeCardNumber && !includeCardCvv)}
-              onClick={handleGenerate}
-              className="px-5 py-2 text-xs font-semibold text-white bg-primary hover:bg-primary-hover disabled:opacity-50 rounded-xl shadow-md shadow-primary/20 flex items-center gap-2 transition-all"
-            >
-              {loading ? (
-                <>
-                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  {t.share_generating}
-                </>
-              ) : (
-                <>
-                  <Share2 className="w-3.5 h-3.5" />
-                  {t.share_generate_link}
-                </>
-              )}
-            </button>
+              onTrigger={handleGenerate}
+              onComplete={(url) => {
+                if (url) {
+                  setGeneratedUrl(url);
+                }
+              }}
+              className="bg-primary-container hover:bg-brand-primary-hover text-on-primary rounded-xl shadow-xs"
+            />
           </div>
         )}
       </div>

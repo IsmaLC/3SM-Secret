@@ -1,6 +1,6 @@
 [package]
 name = "tresm_secret"
-version = "0.1.0"
+version = "0.2.0"
 description = "3SM Secret - Gestor de Contraseñas inspirado en Bitwarden"
 authors = ["3SM"]
 edition = "2021"

@@ -32,6 +32,7 @@ interface SidebarProps {
   onOpenGenerator: () => void;
   onOpenSettings: () => void;
   onLockVault: () => void;
+  hasUpdate?: boolean;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -45,6 +46,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenGenerator,
   onOpenSettings,
   onLockVault,
+  hasUpdate = false,
 }) => {
   const t = translations[language];
 
@@ -59,9 +61,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <aside className="w-64 shrink-0 bg-surface-sidebar border-r border-border-strong flex flex-col h-screen select-none">
       {/* Cabecera con Branding Oficial de Stitch */}
-      <div className="h-16 px-4 border-b border-border-strong flex items-center justify-between bg-surface-canvas shrink-0">
+      <div className="h-16 px-4 border-b border-border-strong flex items-center justify-center bg-surface-canvas shrink-0">
         <div className="flex items-center gap-3">
           <Logo3SM className="h-10 w-auto" color="text-primary" />
+          <div className="h-7 w-px bg-border-strong" aria-hidden="true" />
           <div>
             <span className="font-bold text-text-primary text-sm tracking-tight block">
               3SM Secret
@@ -160,10 +163,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <button
           type="button"
           onClick={onOpenSettings}
-          className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-text-secondary hover:bg-surface-sidebar hover:text-text-primary transition-colors"
+          className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium text-text-secondary hover:bg-surface-sidebar hover:text-text-primary transition-colors"
         >
-          <Settings className="w-4 h-4 text-text-secondary" />
-          <span>{t.settings}</span>
+          <div className="flex items-center gap-2">
+            <Settings className="w-4 h-4 text-text-secondary" />
+            <span>{t.settings}</span>
+          </div>
+          {hasUpdate && (
+            <span className="relative flex h-2 w-2" title="Actualización disponible">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+            </span>
+          )}
         </button>
 
         <button

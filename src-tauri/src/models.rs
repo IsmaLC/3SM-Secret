@@ -50,11 +50,31 @@ pub struct Folder {
     pub name: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+fn default_true() -> bool {
+    true
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VaultSettings {
     pub auto_lock_minutes: u32,
     pub language: String,
     pub theme: String,
+    #[serde(default = "default_true")]
+    pub check_updates_daily: bool,
+    #[serde(default)]
+    pub last_update_check: Option<String>,
+}
+
+impl Default for VaultSettings {
+    fn default() -> Self {
+        Self {
+            auto_lock_minutes: 15,
+            language: "es".to_string(),
+            theme: "light".to_string(),
+            check_updates_daily: true,
+            last_update_check: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -4339,7 +4339,7 @@ dependencies = [
 
 [[package]]
 name = "tresm_secret"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "aes-gcm",
  "arboard",

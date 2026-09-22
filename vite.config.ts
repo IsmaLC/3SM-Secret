@@ -2,6 +2,8 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 // @ts-expect-error type error without @types/node package
 import process from "node:process";
+// @ts-expect-error type error without @types/node package
+import { spawn } from "node:child_process";
 const host = process.env.TAURI_DEV_HOST;
 
 // Almacén seguro en memoria para enlaces efímeros de un solo uso
@@ -10,11 +12,62 @@ const ephemeralShares = new Map<
   { ciphertext: string; nonce: string; expiresAt: number; consumed: boolean; consumedAt?: number }
 >();
 
+let cloudflareTunnelUrl: string | null = null;
+let tunnelProcess: any = null;
+
+function startCloudflareTunnel() {
+  if (tunnelProcess) return;
+  try {
+    tunnelProcess = spawn("npx", ["-y", "cloudflared", "tunnel", "--url", "http://localhost:1420"], {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    const onOutput = (chunk: any) => {
+      const text = chunk.toString();
+      const match = text.match(/https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/);
+      if (match) {
+        cloudflareTunnelUrl = match[0];
+        console.log("\n[3SM Secret] 🌐 Túnel Cloudflare público activo:", cloudflareTunnelUrl);
+      }
+    };
+
+    tunnelProcess.stdout?.on("data", onOutput);
+    tunnelProcess.stderr?.on("data", onOutput);
+
+    tunnelProcess.on("exit", () => {
+      tunnelProcess = null;
+      cloudflareTunnelUrl = null;
+    });
+
+    process.on("exit", () => {
+      if (tunnelProcess) {
+        try {
+          tunnelProcess.kill();
+        } catch {}
+      }
+    });
+  } catch (err) {
+    console.error("Error arrancando cloudflared tunnel:", err);
+  }
+}
+
 function ephemeralSharePlugin() {
   return {
     name: "ephemeral-share-plugin",
     configureServer(server: any) {
+      // Iniciar el túnel de Cloudflare en segundo plano para acceso universal sin cuentas
+      startCloudflareTunnel();
+
       server.middlewares.use((req: any, res: any, next: any) => {
+        // Endpoint para consultar la URL pública generada por Cloudflare
+        if (req.method === "GET" && req.url === "/api/tunnel-url") {
+          res.setHeader("Cache-Control", "no-store, no-cache");
+          res.setHeader("Content-Type", "application/json");
+          res.writeHead(200);
+          res.end(JSON.stringify({ url: cloudflareTunnelUrl, ready: !!cloudflareTunnelUrl }));
+          return;
+        }
+
         if (req.method === "POST" && req.url === "/api/shares") {
           let body = "";
           req.on("data", (chunk: any) => (body += chunk));
@@ -113,6 +166,7 @@ export default defineConfig(() => ({
   server: {
     port: 1420,
     strictPort: true,
+    allowedHosts: true,
     host: host || false,
     hmr: host
       ? {

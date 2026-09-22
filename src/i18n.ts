@@ -134,6 +134,18 @@ export interface Translations {
   share_view_expired_desc: string;
   share_view_loading: string;
   share_view_error: string;
+  updates: string;
+  version_and_updates: string;
+  check_updates_daily_desc: string;
+  check_updates_now: string;
+  checking_updates: string;
+  app_up_to_date: string;
+  update_available: string;
+  update_available_desc: string;
+  view_update: string;
+  last_check: string;
+  never_checked: string;
+  update_check_error: string;
 }
 
 export const translations: Record<Language, Translations> = {
@@ -252,25 +264,37 @@ export const translations: Record<Language, Translations> = {
     clipboard_cleared_notice: "El portapapeles se purgará automáticamente a los 10 segundos.",
     totp_linked: "2FA Vinculado",
     share: "Compartir",
-    share_title: "Compartir Credencial Segura",
-    share_desc: "Genera un enlace efímero de un solo uso. Las credenciales se cifran localmente y se autodestruyen tras abrirse una única vez.",
-    share_expiration: "Tiempo de vida máximo",
+    share_title: "Compartir Credencial",
+    share_desc: "Este enlace solo podrá abrirse una única vez y la información será visible durante 15 segundos.",
+    share_expiration: "Tiempo de validez",
     share_1h: "1 hora",
     share_24h: "24 horas",
-    share_generate_link: "Generar Enlace Seguro",
-    share_generating: "Cifrando y generando...",
-    share_link_ready: "Enlace Cifrado de Un Solo Uso",
-    share_link_warning: "¡Atención! Este enlace mostrará la información compartida una única vez y solo durante 15 segundos. Tras ese tiempo, el enlace quedará inoperativo y no podrá volver a ser utilizado.",
+    share_generate_link: "Generar enlace",
+    share_generating: "Generando",
+    share_link_ready: "Enlace generado con éxito",
+    share_link_warning: "Copia y comparte este enlace. Por seguridad, solo se puede abrir una vez y dejará de funcionar tras 15 segundos.",
     share_copy_link: "Copiar Enlace",
     share_link_copied: "¡Enlace copiado!",
     share_open_browser: "Abrir en el Navegador",
-    share_destroyed_notice: "Este secreto se ha autodestruido permanentemente tras esta lectura.",
-    share_view_title: "Credencial Compartida Segura",
-    share_view_burned: "Enlace no disponible o ya destruido",
-    share_view_burned_desc: "Este enlace de un solo uso ya ha sido visualizado y destruido permanentemente de acuerdo con la política de seguridad Zero-Knowledge.",
-    share_view_expired_desc: "El tiempo de vida de este enlace ha expirado y los datos han sido purgados.",
-    share_view_loading: "Descifrando credenciales de un solo uso...",
-    share_view_error: "Error al descifrar o consumir el enlace seguro.",
+    share_destroyed_notice: "Este enlace ha dejado de estar disponible tras esta lectura.",
+    share_view_title: "Información Compartida",
+    share_view_burned: "Enlace no disponible",
+    share_view_burned_desc: "Este enlace ya ha sido consultado o ha caducado. Por seguridad, solo se puede abrir una única vez.",
+    share_view_expired_desc: "El tiempo de validez de este enlace ha expirado.",
+    share_view_loading: "Cargando información...",
+    share_view_error: "No se ha podido acceder al enlace.",
+    updates: "Actualizaciones",
+    version_and_updates: "Versión y Actualizaciones",
+    check_updates_daily_desc: "La aplicación comprueba automáticamente una vez al día si hay nuevas versiones disponibles.",
+    check_updates_now: "Buscar actualizaciones",
+    checking_updates: "Comprobando...",
+    app_up_to_date: "La aplicación está actualizada",
+    update_available: "Nueva versión disponible",
+    update_available_desc: "Hay una versión más reciente lista para descargar.",
+    view_update: "Ver actualización",
+    last_check: "Última comprobación",
+    never_checked: "Nunca",
+    update_check_error: "No se pudo comprobar en este momento",
   },
   ca: {
     app_name: "3SM Secret",
@@ -406,5 +430,17 @@ export const translations: Record<Language, Translations> = {
     share_view_expired_desc: "El temps de vida d'aquest enllaç ha expirat i les dades han estat purgades.",
     share_view_loading: "Desxifrant credencials d'un sol ús...",
     share_view_error: "Error en desxifrar o consumir l'enllaç segur.",
+    updates: "Actualitzacions",
+    version_and_updates: "Versió i Actualitzacions",
+    check_updates_daily_desc: "L'aplicació comprova automàticament un cop al dia si hi ha noves versions disponibles.",
+    check_updates_now: "Cercar actualitzacions",
+    checking_updates: "Comprovant...",
+    app_up_to_date: "L'aplicació està actualitzada",
+    update_available: "Nova versió disponible",
+    update_available_desc: "Hi ha una versió més recent a punt per descarregar.",
+    view_update: "Veure actualització",
+    last_check: "Darrera comprovació",
+    never_checked: "Mai",
+    update_check_error: "No s'ha pogut comprovar en aquest moment",
   },
 };

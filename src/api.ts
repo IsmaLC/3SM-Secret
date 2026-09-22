@@ -52,6 +52,8 @@ export const api = {
         auto_lock_minutes: 15,
         language: language || "es",
         theme: "light",
+        check_updates_daily: true,
+        last_update_check: null,
       },
       password_hint: hint || null,
     };
@@ -337,6 +339,31 @@ export const api = {
     } catch {}
 
     return { shareId, shareKeyHex };
+  },
+
+  // Consultar estado de la URL pública de Cloudflare Tunnel (trycloudflare.com)
+  async getTunnelStatus(): Promise<{ url: string | null; ready: boolean }> {
+    try {
+      const res = await fetch("/api/tunnel-url", { cache: "no-store" });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch {}
+    return { url: null, ready: false };
+  },
+
+  // Obtener la URL base pública para compartir en cualquier ordenador
+  async getPublicShareBaseUrl(): Promise<string> {
+    try {
+      for (let i = 0; i < 4; i++) {
+        const status = await this.getTunnelStatus();
+        if (status.ready && status.url) {
+          return status.url;
+        }
+        await new Promise((r) => setTimeout(r, 700));
+      }
+    } catch {}
+    return `${window.location.origin}${window.location.pathname}`;
   },
 
   async consumeSecureShare(shareId: string): Promise<ConsumedShareResponse> {
