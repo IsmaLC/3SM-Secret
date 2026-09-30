@@ -231,7 +231,7 @@ pub async fn create_secure_share(
     share_store: State<'_, crate::share::ShareStore>,
 ) -> Result<(String, String), String> {
     let ttl = ttl_minutes.unwrap_or(60);
-    share_store.create_share(&payload, ttl).await
+    share_store.create_share(&payload, ttl)
 }
 
 #[derive(serde::Serialize)]
@@ -245,10 +245,40 @@ pub async fn consume_secure_share(
     share_id: String,
     share_store: State<'_, crate::share::ShareStore>,
 ) -> Result<ConsumedShareResponse, String> {
-    let (ciphertext, nonce) = share_store.consume_share(&share_id).await?;
+    let (ciphertext, nonce) = share_store.consume_share(&share_id)?;
     Ok(ConsumedShareResponse {
         ciphertext: base64_encode(&ciphertext),
         nonce: hex::encode(nonce),
+    })
+}
+
+#[derive(serde::Serialize)]
+pub struct TunnelStatusResponse {
+    pub ready: bool,
+    pub url: Option<String>,
+    pub connecting: bool,
+}
+
+#[tauri::command]
+pub async fn get_cloudflare_tunnel_status(
+    tunnel_manager: State<'_, crate::tunnel::TunnelManager>,
+) -> Result<TunnelStatusResponse, String> {
+    Ok(TunnelStatusResponse {
+        ready: tunnel_manager.is_ready(),
+        url: tunnel_manager.get_url(),
+        connecting: tunnel_manager.is_connecting(),
+    })
+}
+
+#[tauri::command]
+pub async fn start_cloudflare_tunnel(
+    tunnel_manager: State<'_, crate::tunnel::TunnelManager>,
+) -> Result<TunnelStatusResponse, String> {
+    tunnel_manager.start_tunnel(1422);
+    Ok(TunnelStatusResponse {
+        ready: tunnel_manager.is_ready(),
+        url: tunnel_manager.get_url(),
+        connecting: tunnel_manager.is_connecting(),
     })
 }
 

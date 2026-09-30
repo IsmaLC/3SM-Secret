@@ -316,21 +316,36 @@ export const api = {
     const nonceHex = Array.from(nonceBytes).map(b => b.toString(16).padStart(2, '0')).join('');
     const shareKeyHex = Array.from(keyBytes).map(b => b.toString(16).padStart(2, '0')).join('');
 
-    // 1. Guardar en memoria RAM volátil del servidor local (/api/shares) sin caché ni persistencia en disco
+    // 1. Guardar en memoria RAM volátil del servidor nativo local (127.0.0.1:1422)
+    const shareBody = JSON.stringify({
+      shareId,
+      ciphertext: ciphertextB64,
+      nonce: nonceHex,
+      ttlMinutes,
+    });
+
+    let saved = false;
     try {
-      await fetch("/api/shares", {
+      const res = await fetch("http://127.0.0.1:1422/api/shares", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         cache: "no-store",
-        body: JSON.stringify({
-          shareId,
-          ciphertext: ciphertextB64,
-          nonce: nonceHex,
-          ttlMinutes,
-        }),
+        body: shareBody,
       });
-    } catch (err) {
-      console.warn("No se pudo contactar con /api/shares:", err);
+      if (res.ok) saved = true;
+    } catch {}
+
+    if (!saved) {
+      try {
+        await fetch("/api/shares", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          cache: "no-store",
+          body: shareBody,
+        });
+      } catch (err) {
+        console.warn("No se pudo contactar con /api/shares:", err);
+      }
     }
 
     // Purgar cualquier residuo de versiones anteriores en localStorage para máxima privacidad
@@ -342,28 +357,56 @@ export const api = {
   },
 
   // Consultar estado de la URL pública de Cloudflare Tunnel (trycloudflare.com)
-  async getTunnelStatus(): Promise<{ url: string | null; ready: boolean }> {
+  async getTunnelStatus(): Promise<{ url: string | null; ready: boolean; connecting?: boolean }> {
+    if (isTauri()) {
+      try {
+        const res = await invoke<{ ready: boolean; url: string | null; connecting: boolean }>(
+          "get_cloudflare_tunnel_status"
+        );
+        return res;
+      } catch (err) {
+        console.warn("Error consultando estado del túnel desde Tauri:", err);
+      }
+    }
     try {
-      const res = await fetch("/api/tunnel-url", { cache: "no-store" });
+      const res = await fetch("/api/tunnel-status", { cache: "no-store" });
       if (res.ok) {
         return await res.json();
       }
     } catch {}
-    return { url: null, ready: false };
+    return { url: null, ready: false, connecting: false };
   },
 
-  // Obtener la URL base pública para compartir en cualquier ordenador
-  async getPublicShareBaseUrl(): Promise<string> {
-    try {
-      for (let i = 0; i < 4; i++) {
-        const status = await this.getTunnelStatus();
-        if (status.ready && status.url) {
-          return status.url;
-        }
-        await new Promise((r) => setTimeout(r, 700));
+  async startTunnel(): Promise<void> {
+    if (isTauri()) {
+      try {
+        await invoke("start_cloudflare_tunnel");
+      } catch (err) {
+        console.warn("Error iniciando túnel:", err);
       }
-    } catch {}
-    return `${window.location.origin}${window.location.pathname}`;
+    }
+  },
+
+  // Obtener la URL base pública para compartir en cualquier dispositivo
+  async getPublicShareBaseUrl(maxWaitSeconds: number = 10): Promise<string> {
+    const startTime = Date.now();
+    const maxWaitMs = maxWaitSeconds * 1000;
+
+    while (Date.now() - startTime < maxWaitMs) {
+      const status = await this.getTunnelStatus();
+      if (status.ready && status.url) {
+        return status.url;
+      }
+      await new Promise((r) => setTimeout(r, 600));
+    }
+
+    // Si aún no está listo el túnel, comprobar una última vez
+    const finalCheck = await this.getTunnelStatus();
+    if (finalCheck.ready && finalCheck.url) {
+      return finalCheck.url;
+    }
+
+    return "http://localhost:1422";
   },
 
   async consumeSecureShare(shareId: string): Promise<ConsumedShareResponse> {

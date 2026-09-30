@@ -30,13 +30,31 @@ export function ShareView({ language }: ShareViewProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [showCvv, setShowCvv] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [isWindowFocused, setIsWindowFocused] = useState(true);
 
-  // Temporizador de 15 segundos exactos
-  const [timeLeft, setTimeLeft] = useState(15);
+  // Temporizador de 20 segundos exactos
+  const [timeLeft, setTimeLeft] = useState(20);
   const [isTimeExpired, setIsTimeExpired] = useState(false);
 
   // Evitar doble llamada por React.StrictMode
   const hasRequestedRef = useRef(false);
+
+  // Protección de privacidad: ocultar contenido si la ventana pierde el foco
+  useEffect(() => {
+    const handleBlur = () => setIsWindowFocused(false);
+    const handleFocus = () => setIsWindowFocused(true);
+    const handleVisibility = () => setIsWindowFocused(!document.hidden);
+
+    window.addEventListener("blur", handleBlur);
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      window.removeEventListener("blur", handleBlur);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, []);
 
   useEffect(() => {
     if (hasRequestedRef.current) return;
@@ -91,7 +109,7 @@ export function ShareView({ language }: ShareViewProps) {
     loadAndBurnSecret();
   }, []);
 
-  // Temporizador regresivo de 15 segundos para la visualización con higiene de memoria
+  // Temporizador regresivo de 20 segundos para la visualización con higiene de memoria
   useEffect(() => {
     if (!payload || isTimeExpired) return;
 
@@ -121,13 +139,15 @@ export function ShareView({ language }: ShareViewProps) {
         payload.password = "";
         payload.username = "";
         payload.notes = "";
+        payload.card_number = "";
+        payload.card_cvv = "";
       }
     };
   }, [payload, isTimeExpired]);
 
   const handleCopy = async (text: string, fieldId: string) => {
     try {
-      await api.copyToClipboardTimed(text, 15);
+      await api.copyToClipboardTimed(text, 20);
       setCopiedField(fieldId);
       setTimeout(() => setCopiedField(null), 2000);
     } catch (err) {
@@ -135,8 +155,8 @@ export function ShareView({ language }: ShareViewProps) {
     }
   };
 
-  // Porcentaje restante de tiempo (15s = 100%)
-  const progressPercent = Math.max(0, (timeLeft / 15) * 100);
+  // Porcentaje restante de tiempo (20s = 100%)
+  const progressPercent = Math.max(0, (timeLeft / 20) * 100);
 
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-950 flex flex-col items-center justify-center p-4 selection:bg-primary/20 font-sans">
@@ -146,14 +166,31 @@ export function ShareView({ language }: ShareViewProps) {
           <Logo3SM className="h-11 w-auto" />
           <div className="h-7 w-px bg-slate-300 dark:bg-slate-700" aria-hidden="true" />
           <span className="font-bold text-slate-800 dark:text-slate-200 tracking-tight text-base font-sans">
-            3SM Secret <span className="text-xs font-normal text-slate-400">| Send</span>
+            3SM Secret
           </span>
         </div>
       </div>
 
       {/* Contenedor Principal */}
       <div className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden relative">
-        {/* Barra de progreso de tiempo de vida (15 segundos) */}
+        {/* Capa de protección de privacidad contra capturas al perder foco */}
+        {!isWindowFocused && payload && !isTimeExpired && (
+          <div className="absolute inset-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center space-y-3 animate-in fade-in duration-150">
+            <div className="w-12 h-12 rounded-xl bg-brand-primary-subtle text-primary flex items-center justify-center">
+              <ShieldCheck className="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                Contenido Protegido
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs leading-relaxed">
+                La información se oculta automáticamente cuando la ventana no está activa para evitar capturas de pantalla o miradas indiscretas. Vuelve a enfocar esta ventana para continuar.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Barra de progreso de tiempo de vida (20 segundos) */}
         {payload && !isTimeExpired && (
           <div className="w-full bg-slate-100 dark:bg-slate-800 h-1 overflow-hidden">
             <div
@@ -171,7 +208,7 @@ export function ShareView({ language }: ShareViewProps) {
             </p>
           </div>
         ) : isTimeExpired ? (
-          /* Vista tras agotarse los 15 segundos exactos */
+          /* Vista tras agotarse los 20 segundos exactos */
           <div className="p-8 text-center space-y-5 animate-in fade-in duration-300 font-sans">
             <div className="w-14 h-14 mx-auto rounded-2xl bg-brand-primary-subtle text-primary flex items-center justify-center">
               <Clock className="w-7 h-7 text-primary" />
@@ -181,15 +218,8 @@ export function ShareView({ language }: ShareViewProps) {
                 Tiempo de visualización agotado
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed max-w-sm mx-auto font-sans">
-                Los 15 segundos han expirado y la información ha sido eliminada permanentemente.
+                Los 20 segundos han expirado.
               </p>
-            </div>
-
-            <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400 flex items-center gap-2 text-left font-sans">
-              <ShieldCheck className="w-4 h-4 text-primary shrink-0" />
-              <span>
-                La credencial ya no existe en ningún servidor ni en este navegador.
-              </span>
             </div>
           </div>
         ) : error ? (
@@ -215,7 +245,7 @@ export function ShareView({ language }: ShareViewProps) {
             </div>
           </div>
         ) : payload ? (
-          /* Vista de credencial descifrada con éxito durante los 15 segundos */
+          /* Vista de credencial descifrada con éxito durante los 20 segundos */
           <div>
             {/* Cabecera de secreto armonizada con el resto de la app */}
             <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40">
@@ -231,7 +261,7 @@ export function ShareView({ language }: ShareViewProps) {
                   </div>
                 </div>
 
-                {/* Badge de cuenta atrás de 15 segundos con paleta corporativa */}
+                {/* Badge de cuenta atrás de 20 segundos con paleta corporativa */}
                 <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-brand-primary-subtle text-primary border border-primary-container/20 font-sans">
                   <Clock className="w-3.5 h-3.5 text-primary" />
                   <span>{timeLeft}s</span>
@@ -324,45 +354,75 @@ export function ShareView({ language }: ShareViewProps) {
                     <div>
                       <span className="text-[11px] text-slate-400">{t.card_number}</span>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                        <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 font-mono">
                           {payload.card_number}
                         </span>
                         <button
                           onClick={() => handleCopy(payload.card_number!, "card")}
-                          className="p-1 text-slate-400 hover:text-slate-600"
+                          className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                          title="Copiar número de tarjeta"
                         >
                           {copiedField === "card" ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
                         </button>
                       </div>
                     </div>
 
+                    {payload.cardholder_name && (
+                      <div>
+                        <span className="text-[11px] text-slate-400">Titular de la Tarjeta</span>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                            {payload.cardholder_name}
+                          </span>
+                          <button
+                            onClick={() => handleCopy(payload.cardholder_name!, "cardholder")}
+                            className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                            title="Copiar titular"
+                          >
+                            {copiedField === "cardholder" ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-2 gap-3 pt-1">
                       {payload.card_exp && (
                         <div>
                           <span className="text-[11px] text-slate-400">{t.card_expiration}</span>
-                          <p className="text-xs text-slate-800 dark:text-slate-200 font-medium">
-                            {payload.card_exp}
-                          </p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-xs text-slate-800 dark:text-slate-200 font-medium font-mono">
+                              {payload.card_exp}
+                            </span>
+                            <button
+                              onClick={() => handleCopy(payload.card_exp!, "exp")}
+                              className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                              title="Copiar caducidad"
+                            >
+                              {copiedField === "exp" ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                            </button>
+                          </div>
                         </div>
                       )}
                       {payload.card_cvv && (
                         <div>
                           <span className="text-[11px] text-slate-400">{t.card_cvv}</span>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-slate-800 dark:text-slate-200 font-medium">
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-xs text-slate-800 dark:text-slate-200 font-medium font-mono">
                               {showCvv ? payload.card_cvv : "•••"}
                             </span>
                             <button
                               onClick={() => setShowCvv(!showCvv)}
-                              className="text-slate-400 hover:text-slate-600"
+                              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5"
+                              title="Mostrar/Ocultar CVV"
                             >
                               {showCvv ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
                             </button>
                             <button
                               onClick={() => handleCopy(payload.card_cvv!, "cvv")}
-                              className="p-1 text-slate-400 hover:text-slate-600"
+                              className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                              title="Copiar CVV"
                             >
-                              {copiedField === "cvv" ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                              {copiedField === "cvv" ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
                             </button>
                           </div>
                         </div>

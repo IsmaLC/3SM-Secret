@@ -1,7 +1,6 @@
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use tokio::sync::Mutex;
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -41,7 +40,27 @@ impl ShareStore {
         }
     }
 
-    pub async fn create_share(
+    pub fn insert_raw_share(
+        &self,
+        share_id: String,
+        ciphertext: Vec<u8>,
+        nonce: Vec<u8>,
+        ttl_minutes: u64,
+    ) {
+        let ephemeral = EphemeralShare {
+            ciphertext,
+            nonce,
+            created_at: Instant::now(),
+            ttl: Duration::from_secs(ttl_minutes * 60),
+            consumed: false,
+        };
+
+        let mut guard = self.shares.lock().unwrap();
+        guard.retain(|_, v| !v.consumed && v.created_at.elapsed() < v.ttl);
+        guard.insert(share_id, ephemeral);
+    }
+
+    pub fn create_share(
         &self,
         payload: &SharePayload,
         ttl_minutes: u64,
@@ -60,32 +79,19 @@ impl ShareStore {
         // Cifrar con AES-256-GCM
         let ciphertext = crypto::encrypt_aes_gcm(&key, &nonce, &plaintext)?;
 
-        let share_id = Uuid::new_v4().to_string();
+        let share_id = format!("sec-{}", Uuid::new_v4());
 
-        let ephemeral = EphemeralShare {
-            ciphertext,
-            nonce: nonce.to_vec(),
-            created_at: Instant::now(),
-            ttl: Duration::from_secs(ttl_minutes * 60),
-            consumed: false,
-        };
+        self.insert_raw_share(share_id.clone(), ciphertext, nonce.to_vec(), ttl_minutes);
 
-        {
-            let mut guard = self.shares.lock().await;
-            // Limpieza previa de expirados
-            guard.retain(|_, v| !v.consumed && v.created_at.elapsed() < v.ttl);
-            guard.insert(share_id.clone(), ephemeral);
-        }
-
-        let key_base64 = hex::encode(key_bytes);
-        Ok((share_id, key_base64))
+        let key_hex = hex::encode(key_bytes);
+        Ok((share_id, key_hex))
     }
 
-    pub async fn consume_share(
+    pub fn consume_share(
         &self,
         share_id: &str,
     ) -> Result<(Vec<u8>, Vec<u8>), String> {
-        let mut guard = self.shares.lock().await;
+        let mut guard = self.shares.lock().unwrap();
         
         let share = guard.get_mut(share_id)
             .ok_or_else(|| "Este enlace de un solo uso no existe o ya ha sido consumido.".to_string())?;
@@ -110,3 +116,4 @@ impl ShareStore {
         Ok((ciphertext, nonce))
     }
 }
+

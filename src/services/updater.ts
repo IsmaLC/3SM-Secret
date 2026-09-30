@@ -2,7 +2,7 @@ import { UpdateInfo } from "../types";
 import { check, Update } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 
-export const CURRENT_APP_VERSION = "0.2.0";
+export const CURRENT_APP_VERSION = "0.2.1";
 const GITHUB_REPO = "IsmaLC/3SM-Secret";
 const GITHUB_API_URL = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
 

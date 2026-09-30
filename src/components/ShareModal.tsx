@@ -13,7 +13,8 @@ import {
   KeyRound,
   Eye,
   CreditCard,
-  FileText
+  FileText,
+  Loader2
 } from "lucide-react";
 
 interface ShareModalProps {
@@ -38,6 +39,32 @@ export function ShareModal({ isOpen, onClose, item, language }: ShareModalProps)
   const [generatedUrl, setGeneratedUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [clipboardSeconds, setClipboardSeconds] = useState<number | null>(null);
+
+  // Estado del túnel Cloudflare
+  const [tunnelReady, setTunnelReady] = useState(false);
+
+  // Monitorizar estado del túnel mientras el modal esté abierto
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let isMounted = true;
+    const updateStatus = async () => {
+      try {
+        const status = await api.getTunnelStatus();
+        if (!isMounted) return;
+        setTunnelReady(status.ready);
+      } catch {}
+    };
+
+    updateStatus();
+    api.startTunnel();
+
+    const interval = setInterval(updateStatus, 1500);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [isOpen]);
 
   // Reiniciar estado cada vez que se abre el modal o se selecciona un elemento diferente
   useEffect(() => {
@@ -156,6 +183,28 @@ export function ShareModal({ isOpen, onClose, item, language }: ShareModalProps)
 
         {/* Contenido */}
         <div className="p-6 overflow-y-auto space-y-5">
+          {/* Indicador de estado del túnel seguro */}
+          <div className="px-3.5 py-2.5 rounded-xl text-xs flex items-center justify-between border bg-slate-50/70 dark:bg-slate-800/40 border-slate-200/80 dark:border-slate-800 transition-all">
+            <div className="flex items-center gap-2.5">
+              <div className="p-1.5 rounded-lg bg-primary/10 text-primary dark:bg-primary/20 shrink-0">
+                <ShieldCheck className="w-4 h-4" />
+              </div>
+              <span className="font-medium text-slate-700 dark:text-slate-200">
+                Túnel de seguridad
+              </span>
+            </div>
+            {tunnelReady ? (
+              <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-primary/10 dark:bg-primary/25 font-bold text-primary dark:text-primary-fixed-dim tracking-wider">
+                CONECTADO
+              </span>
+            ) : (
+              <div className="flex items-center gap-1.5 text-[10px] px-2 py-0.5 rounded-md bg-slate-200/60 dark:bg-slate-700/60 font-medium text-slate-500 dark:text-slate-400">
+                <Loader2 className="w-3 h-3 animate-spin text-primary" />
+                <span>CONECTANDO...</span>
+              </div>
+            )}
+          </div>
+
           {!generatedUrl ? (
             <>
               {/* Aviso claro y sobrio de un solo uso */}
@@ -334,29 +383,23 @@ export function ShareModal({ isOpen, onClose, item, language }: ShareModalProps)
                   type="text"
                   readOnly
                   value={generatedUrl}
-                  className="w-full bg-slate-50/60 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 text-xs rounded-xl px-3.5 py-3 pr-24 font-mono select-all focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full bg-slate-50/60 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 text-xs rounded-xl px-3.5 py-3 font-mono select-all focus:outline-none focus:ring-2 focus:ring-primary"
                 />
-                <button
-                  onClick={handleCopy}
-                  className={`absolute right-1.5 top-1.5 bottom-1.5 px-3 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all shadow-xs ${
-                    copied
-                      ? "bg-emerald-600 text-white"
-                      : "bg-primary-container hover:bg-brand-primary-hover text-on-primary"
-                  }`}
-                >
-                  {copied ? (
-                    <>
-                      <Check className="w-3.5 h-3.5" />
-                      <span>{t.copied}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-3.5 h-3.5" />
-                      <span>{t.copy}</span>
-                    </>
-                  )}
-                </button>
               </div>
+
+              {/* Botón de acción principal: Copiar Enlace */}
+              <button
+                type="button"
+                onClick={handleCopy}
+                className={`w-full py-2.5 px-4 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-xs ${
+                  copied
+                    ? "bg-emerald-600 text-white"
+                    : "bg-primary-container hover:bg-brand-primary-hover text-on-primary"
+                }`}
+              >
+                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                <span>{copied ? t.copied : t.share_copy_link}</span>
+              </button>
 
               {/* Indicador discreto de autodestrucción del portapapeles (20 segundos) */}
               {clipboardSeconds !== null && (
