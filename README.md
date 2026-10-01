@@ -1,7 +1,11 @@
-# Tauri + React + Typescript
+# SECRET
+Gestor de contraseñas
 
-This template should help get you started developing with Tauri, React and Typescript in Vite.
+Permite guardar credenciales de acceso, notas y datos de tarjetas bancacias.
+La bóveda está encriptada y se guarda en local, dentro de la carpeta de la app.
+La compartición de los datos se realiza mediante http con un tunel hacia trycloudflare, que crea una URL de un úncico uso. Previamente se encripta los datos a compartir.
+Una vez se abre la url, la información se muestra durante 20 segundos, para posteriormente eliminarse (Burn-After-Reading)
 
-## Recommended IDE Setup
+Desarrollado con Tauri + React + Typescript
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+
